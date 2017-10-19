@@ -16,7 +16,7 @@ class Autoencoder(object):
           self.latent_n =latent_n
     
           
-      def encoder(self,X):
+      def encoder(self,X):     # fuction for ecodig part of variatioal Autoencoder
           self.X=X
           with tf.variable_scope('encoder1'):
                W = tf.get_variable("weight",[X.shape[1].value, self.hidden_1_n], initializer = tf.random_normal_initializer(stddev=0.001))
@@ -24,12 +24,12 @@ class Autoencoder(object):
                layer_1 = tf.nn.relu(tf.add(tf.matmul(X,W),b))
                
           with tf.variable_scope('encoder2'):
-               W = tf.get_variable("weight",[self.hidden_1_n, self.hidden_2_n], initializer = tf.random_normal_initializer(stddev= 1. / np.sqrt(self.hidden_1_n / 2.)))
+               W = tf.get_variable("weight",[self.hidden_1_n, self.hidden_2_n], initializer = tf.random_normal_initializer(stddev= 0.001))
                b = tf.get_variable("bias",[1, self.hidden_2_n], initializer = tf.zeros_initializer())
                layer_2 = tf.nn.relu(tf.add(tf.matmul(layer_1,W),b))
                
           with tf.variable_scope('encoder3'):
-               W = tf.get_variable("weight",[self.hidden_2_n, self.hidden_3_n], initializer = tf.random_normal_initializer(stddev= 1. / np.sqrt(self.hidden_2_n / 2.)))
+               W = tf.get_variable("weight",[self.hidden_2_n, self.hidden_3_n], initializer = tf.random_normal_initializer(stddev= 0.001))
                b = tf.get_variable("bias",[1, self.hidden_3_n], initializer = tf.zeros_initializer())
                layer_3 = tf.nn.relu(tf.add(tf.matmul(layer_2,W),b))
 #               
@@ -46,7 +46,7 @@ class Autoencoder(object):
           return mu, std      
       
           
-      def decoder(self,Y): 
+      def decoder(self,Y):         # fuction for decodig part of variatioal Autoencoder
 
           with tf.variable_scope('decoder1',reuse=None):
                W = tf.get_variable("weight",[self.latent_n, self.hidden_3_n], initializer = tf.random_normal_initializer(stddev=0.001))
