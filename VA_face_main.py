@@ -9,65 +9,71 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.misc import imresize
-
 from VA_Auto import Autoencoder
 from load_data import load_data
-
-
-
 
 Batch_size=10
 tf.reset_default_graph()
 
-### Data loadig #########
+## Data loadig from a dataset ###
 images = load_data()
 
+# Autoencoder shape [6400 1000 500 200 [20,20] 1000 500 200 6400]
+# [20 20] stands for 20 nodes for mean vector and  20 nodes for log(variance) vector as latent variables
 
-hidden_n_1 = 1000
-hidden_n_2 = 500
-hidden_n_3 = 200
-latent_n = 20
+# number of nodes in the hidden layes 1,2,3 and latent layer
+hidden_n_1 = 1000    #number of nodes in the 1st hidden layer
+hidden_n_2 = 500     #number of nodes in the 2nd hidden layer
+hidden_n_3 = 200     #number of nodes in the 3rd hidden layer
+latent_n = 20        #number of nodes for the latent vactors
 
-X = tf.placeholder(tf.float32, [None, 6400] , "input")
+
+X = tf.placeholder(tf.float32, [None, 6400] , "input") # flatten grayscale input image of size [80,80] 
 
 
+# Autoencoder object                   
 A = Autoencoder(hidden_n_1 , hidden_n_2 , hidden_n_3 , latent_n)
 
+# Encodig of variational Autoencoder with output of latent vectors that are mean vector (mu) 
+# and log(variance) vector, log_var. 
 mu, log_var = A.encoder(X)
 
+
+# sample from normal distribution N
 unit_gaussian_samples = tf.random_normal([tf.shape(X)[0] , latent_n] , 0 , 1 , dtype=tf.float32)
+
+# sample from gaussian distribtion with mean of mu
 latent_sample = mu + tf.exp(0.5 * log_var) * unit_gaussian_samples 
   
 decoded = A.decoder(latent_sample)
 
-latent_loss = 0.5 * tf.reduce_sum(tf.exp(log_var) + tf.square(mu) - 1. - log_var , axis=1)  
 
-reconstruction_loss=tf.reduce_sum(tf.pow((decoded - X),2),1)
+# latent_loss : KL- divergece  for comparig the distribution of latent variables to a normal distribution N(0,1)
+latent_loss = 0.5 * tf.reduce_sum(tf.exp(log_var) + tf.square(mu) - 1. - log_var , axis=1)   
 
-#decoded = tf.clip_by_value(decoded, 1e-8, 1 - 1e-8)
-#reconstruction_loss=-tf.reduce_sum(X * tf.log(decoded) +(1 - X) * tf.log(1 - decoded), 1)
-
-loss = tf.reduce_mean( latent_loss+reconstruction_loss)
-
-op = tf.train.AdamOptimizer(0.0001).minimize(loss)
+# square loss by commparig the reconstructed image at output and iput image
+reconstruction_loss=tf.reduce_sum(tf.pow((decoded - X),2),1)     
 
 
-init_op = tf.group(tf.global_variables_initializer(),tf.local_variables_initializer())
-init = tf.local_variables_initializer()
+loss = tf.reduce_mean(latent_loss+reconstruction_loss)           # total loss
+
+op = tf.train.AdamOptimizer(0.0001).minimize(loss)               # Adam optimizer with learnig rate of 0.0001
+
+
+init_op = tf.group(tf.global_variables_initializer(),tf.local_variables_initializer()) # initilizatio of all variables
 
 saver = tf.train.Saver()
 
 
 with tf.Session() as sess:
      sess.run (init_op)
-     sess.run (init)
-     saver.restore(sess, "model/model8.ckpt")
+     
+     #saver.restore(sess, "model/model8.ckpt")
 
      coord = tf.train.Coordinator()
      threads = tf.train.start_queue_runners(sess=sess,coord=coord)
      for i in range(20001):         
          im=sess.run (images)
-         #imm=imresize(im,[10,64,64,3])
          im2=im.astype(np.float32)/255
          im2=np.reshape(im2,[10,-1])
          _,L=sess.run([op,loss], feed_dict = {X: im2})
